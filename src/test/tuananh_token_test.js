@@ -4,28 +4,31 @@ contract('MyToken', function(accounts) {
     it("first account should own all tokens", function() {
         var _totalSupply;
         var myTokenInstance;
-        return fixedSupplyToken.deployed().then(function(instance) {
+        return tuananhToken.deployed()
+        .then(function(instance) {
             myTokenInstance = instance;
             return myTokenInstance.totalSupply.call();
-        }).then(function(totalSupply) {
+        })
+        .then(function(totalSupply) {
             _totalSupply = totalSupply;
             return myTokenInstance.balanceOf(accounts[0]);
-        }).then(function(balanceAccountOwner) {
+        })
+        .then(function(balanceAccountOwner) {
             assert.equal(balanceAccountOwner.toNumber(), _totalSupply.toNumber(), "Total Amount of tokens is owned by owner");
         });
     });
 
-    it("second account should own no tokens", function() {
+    it("second account shouldn't have any tokens", function() {
         var myTokenInstance;
-        return fixedSupplyToken.deployed().then(function(instance) {
+        return tuananhToken.deployed()
+        .then(function(instance) {
             myTokenInstance = instance;
             return myTokenInstance.balanceOf(accounts[1]);
-        }).then(function(balanceAccountOwner) {
-            assert.equal(balanceAccountOwner.toNumber(), 0, "Total Amount of tokens is owned by some other address");
+        })
+        .then(function(balanceAccountOwner) {
+            assert.equal(balanceAccountOwner.toNumber(), 0, "Error??");
         });
     });
-
-
 
     it("should send token correctly", function() {
         var token;
@@ -41,7 +44,8 @@ contract('MyToken', function(accounts) {
 
         var amount = 10;
 
-        return fixedSupplyToken.deployed().then(function(instance) {
+        return tuananhToken.deployed()
+        .then(function(instance) {
             token = instance;
             return token.balanceOf.call(account_one);
         }).then(function(balance) {

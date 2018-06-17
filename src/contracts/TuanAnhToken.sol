@@ -61,7 +61,7 @@ contract TuanAnhToken is ERC20Interface {
     }
 
     // Constructor
-    function FixedSupplyToken() public {
+    function TuanAnhToken() public {
         owner = msg.sender;
         balances[owner] = _totalSupply;
     }
