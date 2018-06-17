@@ -96,11 +96,7 @@ contract TuanAnhToken is ERC20Interface {
     // fees in sub-currencies; the command should fail unless the _from account has
     // deliberately authorized the sender of the message via some mechanism; we propose
     // these standardized APIs for approval:
-    function transferFrom(
-    address _from,
-    address _to,
-    uint256 _amount
-    ) public returns (bool success) {
+    function transferFrom(address _from, address _to, uint256 _amount) public returns (bool success) {
         if (balances[_from] >= _amount
         && allowed[_from][msg.sender] >= _amount
         && _amount > 0

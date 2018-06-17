@@ -1,17 +1,17 @@
-var tuananhToken = artifacts.require("./TuanAnhToken.sol");
+var tuananh = artifacts.require("./TuanAnhToken.sol");
 
 contract('MyToken', function(accounts) {
     it("first account should own all tokens", function() {
         var _totalSupply;
-        var myTokenInstance;
-        return tuananhToken.deployed()
+        var token;
+        return tuananh.deployed()
         .then(function(instance) {
-            myTokenInstance = instance;
-            return myTokenInstance.totalSupply.call();
+            token = instance;
+            return token.totalSupply.call();
         })
         .then(function(totalSupply) {
             _totalSupply = totalSupply;
-            return myTokenInstance.balanceOf(accounts[0]);
+            return token.balanceOf(accounts[0]);
         })
         .then(function(balanceAccountOwner) {
             assert.equal(balanceAccountOwner.toNumber(), _totalSupply.toNumber(), "Total Amount of tokens is owned by owner");
@@ -19,11 +19,11 @@ contract('MyToken', function(accounts) {
     });
 
     it("second account shouldn't have any tokens", function() {
-        var myTokenInstance;
-        return tuananhToken.deployed()
+        var token;
+        return tuananh.deployed()
         .then(function(instance) {
-            myTokenInstance = instance;
-            return myTokenInstance.balanceOf(accounts[1]);
+            token = instance;
+            return token.balanceOf(accounts[1]);
         })
         .then(function(balanceAccountOwner) {
             assert.equal(balanceAccountOwner.toNumber(), 0, "Error??");
@@ -44,7 +44,7 @@ contract('MyToken', function(accounts) {
 
         var amount = 10;
 
-        return tuananhToken.deployed()
+        return tuananh.deployed()
         .then(function(instance) {
             token = instance;
             return token.balanceOf.call(account_one);
