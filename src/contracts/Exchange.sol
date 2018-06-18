@@ -68,6 +68,23 @@ contract Exchange is owned {
     // EVENTS //
     ////////////
 
+    //EVENTS for Deposit/withdrawal
+    event DepositForTokenReceived(address indexed _from, uint indexed _symbolIndex, uint _amount, uint _timestamp);
+    event WithdrawalToken(address indexed _to, uint indexed _symbolIndex, uint _amount, uint _timestamp);
+    event DepositForEthReceived(address indexed _from, uint _amount, uint _timestamp);
+    event WithdrawalEth(address indexed _to, uint _amount, uint _timestamp);
+
+    //events for orders
+    event LimitSellOrderCreated(uint indexed _symbolIndex, address indexed _who, uint _amountTokens, uint _priceInWei, uint _orderKey);
+    event SellOrderFulfilled(uint indexed _symbolIndex, uint _amount, uint _priceInWei, uint _orderKey);
+    event SellOrderCanceled(uint indexed _symbolIndex, uint _priceInWei, uint _orderKey);
+    event LimitBuyOrderCreated(uint indexed _symbolIndex, address indexed _who, uint _amountTokens, uint _priceInWei, uint _orderKey);
+    event BuyOrderFulfilled(uint indexed _symbolIndex, uint _amount, uint _priceInWei, uint _orderKey);
+    event BuyOrderCanceled(uint indexed _symbolIndex, uint _priceInWei, uint _orderKey);
+
+    //events for management
+    event TokenAddedToSystem(uint _symbolIndex, string _token, uint _timestamp);
+
 
 
 
@@ -77,13 +94,16 @@ contract Exchange is owned {
     function depositEther() public payable {
         require(balanceEthForAddress[msg.sender] + msg.value >= balanceEthForAddress[msg.sender]);
         balanceEthForAddress[msg.sender] += msg.value;
+        emit DepositForEthReceived(msg.sender, msg.value, now);
     }
 
     function withdrawEther(uint amountInWei) public {
         require(balanceEthForAddress[msg.sender] - amountInWei >= 0);
         require(balanceEthForAddress[msg.sender] - amountInWei <= balanceEthForAddress[msg.sender]);
-        msg.sender.transfer(amountInWei);
         balanceEthForAddress[msg.sender] -= amountInWei;
+        msg.sender.transfer(amountInWei);
+        emit WithdrawalEth(msg.sender, amountInWei, now);
+
     }
 
     function getEthBalanceInWei() public constant returns (uint){
@@ -100,6 +120,7 @@ contract Exchange is owned {
         symbolNameIndex++;
         tokens[symbolNameIndex].symbolName = symbolName;
         tokens[symbolNameIndex].tokenContract = erc20TokenAddress;
+        emit TokenAddedToSystem(symbolNameIndex, symbolName, now);
     }
 
     function hasToken(string symbolName) public constant returns (bool) {
@@ -153,6 +174,7 @@ contract Exchange is owned {
         require(token.transferFrom(msg.sender, address(this), amount) == true);
         require(tokenBalanceForAddress[msg.sender][index] + amount >= tokenBalanceForAddress[msg.sender][index]);
         tokenBalanceForAddress[msg.sender][index] += amount;
+        emit DepositForTokenReceived(msg.sender, symbolNameIndex, amount, now);
     }
 
     function withdrawToken(string symbolName, uint amount) public {
@@ -165,6 +187,7 @@ contract Exchange is owned {
 
         tokenBalanceForAddress[msg.sender][index] -= amount;
         require(token.transfer(msg.sender, amount) == true);
+        emit WithdrawalToken(msg.sender, symbolNameIndex, amount, now);
     }
 
     function getBalance(string symbolName) public constant returns (uint) {
@@ -194,12 +217,36 @@ contract Exchange is owned {
     ////////////////////////////
     // NEW ORDER - BID ORDER //
     ///////////////////////////
-    function buyToken(string symbolName, uint priceInWei, uint amount) {
+    function buyToken(string symbolName, uint priceInWei, uint amount) public {
+        uint8 tokenIndex = getSymbolIndexOrThrow(symbolName);
+        uint total_amount_ether_necessary = 0;
+        uint total_amount_ether_available = 0;
+        
+        total_amount_ether_necessary = amount * priceInWei;
+        
+        //overflow check
+        require(total_amount_ether_necessary >= amount);
+        require(total_amount_ether_necessary >= priceInWei);
+        require(balanceEthForAddress[msg.sender] >= total_amount_ether_necessary);
+        require(balanceEthForAddress[msg.sender] - total_amount_ether_necessary >= 0);
+        
+        balanceEthForAddress[msg.sender] -= total_amount_ether_necessary;
+        
+        if (tokens[tokenIndex].amountSellPrices == 0 || tokens[tokenIndex].curSellPrice > priceInWei) {
+            addLimitBuyOrder(tokenIndex, priceInWei, amount, msg.sender);
+            LimitBuyOrderCreated(tokenIndex, msg.sender, amount, priceInWei, tokens[tokenIndex].buyBook[priceInWei].offers_length);
+        } else {
+            revert();
+        }
     }
 
 
-
-
+    ///////////////////////////
+    // BID LIMIT ORDER LOGIC //
+    ///////////////////////////
+    function addLimitBuyOrder(uint8 tokenIndex, uint priceInWei, uint amount, address who) internal {
+        
+    }
 
     ////////////////////////////
     // NEW ORDER - ASK ORDER //
