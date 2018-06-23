@@ -298,14 +298,87 @@ contract Exchange is owned {
             }
         }
     }
-
+    
+    
+    
+    
+    
+    
+    
     ////////////////////////////
     // NEW ORDER - ASK ORDER //
     ///////////////////////////
-    function sellToken(string symbolName, uint priceInWei, uint amount) {
+    function sellToken(string symbolName, uint priceInWei, uint amount) public {
+        
+        uint8 tokenIndex = getSymbolIndexOrThrow(symbolName);
+        require(tokenBalanceForAddress[msg.sender][tokenIndex] >= amount);
+        require(tokenBalanceForAddress[msg.sender][tokenIndex] - amount >= 0);
+        
+        tokenBalanceForAddress[msg.sender][tokenIndex] -= amount;
+        
+        if (tokens[tokenIndex].amountSellPrices == 0 || tokens[tokenIndex].curBuyPrice < priceInWei) {
+            addLimitSellOrder(tokenIndex, priceInWei, amount, msg.sender);
+            emit LimitSellOrderCreated(tokenIndex, msg.sender, amount, priceInWei, tokens[tokenIndex].sellBook[priceInWei].offers_length);
+        } else {
+            revert();
+        }
+        
     }
 
-
+    function addLimitSellOrder(uint8 tokenIndex, uint priceInWei, uint amount, address who) internal {
+        
+        tokens[tokenIndex].sellBook[priceInWei].offers_length ++;
+        tokens[tokenIndex].sellBook[priceInWei].offers[tokens[tokenIndex].buyBook[priceInWei].offers_length] = Offer(amount, who);
+    
+        if (tokens[tokenIndex].sellBook[priceInWei].offers_length == 1) {
+            //new sell order 
+            tokens[tokenIndex].sellBook[priceInWei].offers_key = 1;
+            tokens[tokenIndex].amountSellPrices++;
+            
+            uint curSellPrice = tokens[tokenIndex].curSellPrice;
+            uint highestSellPrice = tokens[tokenIndex].highestSellPrice;
+            
+            if (highestSellPrice == 0 || highestSellPrice < priceInWei) {
+                if (curSellPrice == 0) {
+                    //there is no sell oder yet
+                    tokens[tokenIndex].curSellPrice = priceInWei;
+                    tokens[tokenIndex].sellBook[priceInWei].higherPrice = 0;
+                    tokens[tokenIndex].sellBook[priceInWei].lowerPrice = 0; 
+                } else {
+                    //new order is the highest one
+                    tokens[tokenIndex].sellBook[highestSellPrice].higherPrice = priceInWei;
+                    tokens[tokenIndex].sellBook[priceInWei].higherPrice = 0;
+                    tokens[tokenIndex].sellBook[priceInWei].lowerPrice = highestSellPrice;
+                }
+                
+                tokens[tokenIndex].highestSellPrice = priceInWei;
+            } 
+            
+        } else if (curSellPrice > priceInWei) {
+            //this sell order is the lowest one
+            tokens[tokenIndex].sellBook[curSellPrice].lowerPrice = priceInWei;
+            tokens[tokenIndex].sellBook[priceInWei].higherPrice = curSellPrice;
+            tokens[tokenIndex].sellBook[priceInWei].lowerPrice = 0;
+            tokens[tokenIndex].curSellPrice = priceInWei;
+        } else {
+            //new sell order is in the middle of sell book
+            uint sellPrice = tokens[tokenIndex].curSellPrice;
+            bool found = false;
+            while (sellPrice > 0 && !found) {
+                if (tokens[tokenIndex].sellBook[sellPrice].higherPrice > priceInWei
+                    && sellPrice < priceInWei) {
+                        
+                        tokens[tokenIndex].sellBook[priceInWei].higherPrice = tokens[tokenIndex].sellBook[sellPrice].higherPrice;
+                        tokens[tokenIndex].sellBook[priceInWei].lowerPrice = sellPrice;
+                        
+                        tokens[tokenIndex].sellBook[sellPrice].higherPrice = priceInWei;
+                        tokens[tokenIndex].sellBook[tokens[tokenIndex].sellBook[sellPrice].higherPrice].lowerPrice = priceInWei;
+                        found = true;
+                }
+                sellPrice = tokens[tokenIndex].sellBook[sellPrice].higherPrice;
+            }
+        }
+    }
 
     //////////////////////////////
     // CANCEL LIMIT ORDER LOGIC //
